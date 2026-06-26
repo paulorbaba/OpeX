@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Operação — Sherpa42</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f5f4f0;
+  --surface: #ffffff;
+  --ink: #1a1a18;
+  --ink2: #5f5e5a;
+  --ink3: #888780;
+  --border: rgba(0,0,0,0.10);
+  --border-light: rgba(0,0,0,0.06);
+  --accent: #1a1a18;
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  padding: 2rem 1rem 4rem;
+  font-size: 14px;
+}
+
+.page { max-width: 900px; margin: 0 auto; }
+
+/* ── Header ── */
+.page-header { margin-bottom: 2rem; }
+.eyebrow { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink3); margin-bottom: 8px; }
+.project-name-input {
+  font-size: 22px; font-weight: 500; color: var(--ink);
+  border: none; background: transparent; outline: none; width: 100%;
+  border-bottom: 1.5px dashed var(--border);
+  padding-bottom: 4px; margin-bottom: 6px;
+}
+.project-name-input::placeholder { color: #ccc; }
+.project-desc-input {
+  font-size: 14px; color: var(--ink2); border: none; background: transparent;
+  outline: none; width: 100%;
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 2px; font-family: inherit;
+}
+.project-desc-input::placeholder { color: #ccc; }
+
+/* ── Block toggle bar ── */
+.toggle-bar {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+}
+.toggle-bar-label { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink3); width: 100%; margin-bottom: 4px; }
+.toggle-pill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 20px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg);
+  font-size: 12px; font-weight: 500; color: var(--ink2);
+  user-select: none; transition: all 0.15s;
+}
+.toggle-pill input { display: none; }
+.toggle-pill.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+.toggle-pill .pill-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: 0.5; }
+.toggle-pill.active .pill-dot { opacity: 1; }
+
+/* ── Block ── */
+.block {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+.block.hidden { display: none; }
+
+.block-header {
+  display: flex; align-items: flex-start; gap: 12px;
+  margin-bottom: 1.25rem; padding-bottom: 1rem;
+  border-bottom: 0.5px solid var(--border-light);
+}
+.block-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.block-title { font-size: 15px; font-weight: 500; color: var(--ink); }
+.block-subtitle { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+.block-title-input, .block-subtitle-input {
+  border: none; background: transparent; outline: none;
+  font-family: inherit; color: inherit; width: 100%;
+}
+.block-title-input { font-size: 15px; font-weight: 500; }
+.block-subtitle-input { font-size: 12px; color: var(--ink3); }
+
+/* ── Grid de sliders ── */
+.sliders-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+.slider-item {}
+.sl-label { font-size: 11px; color: var(--ink3); margin-bottom: 2px; }
+.sl-val { font-size: 20px; font-weight: 500; color: var(--ink); line-height: 1.2; }
+.sl-unit { font-size: 11px; color: var(--ink3); }
+input[type=range] {
+  width: 100%; height: 4px; -webkit-appearance: none; appearance: none;
+  background: #d3d1c7; border-radius: 2px; outline: none; margin-top: 6px; display: block;
+}
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--ink); cursor: pointer; }
+input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--ink); cursor: pointer; border: none; }
+
+/* ── Editable number input ── */
+.num-input-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+.num-item {}
+.num-item .sl-label { font-size: 11px; color: var(--ink3); margin-bottom: 4px; }
+.num-field-wrap { display: flex; align-items: baseline; gap: 6px; }
+.num-field {
+  font-size: 20px; font-weight: 500; color: var(--ink);
+  border: none; border-bottom: 1.5px solid var(--border);
+  background: transparent; outline: none; width: 90px;
+  font-family: inherit;
+}
+.num-field:focus { border-bottom-color: var(--ink); }
+.num-unit { font-size: 11px; color: var(--ink3); }
+
+/* ── Dias editáveis ── */
+.days-section { margin-bottom: 1.25rem; }
+.days-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.section-label { font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink3); }
+.btn-add { font-size: 11px; color: var(--ink3); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+.btn-add:hover { color: var(--ink); border-color: var(--ink); }
+.days-list { display: flex; flex-direction: column; gap: 6px; }
+.day-row {
+  display: grid; grid-template-columns: 90px 1fr 1fr auto;
+  gap: 8px; align-items: center;
+  background: var(--bg); border-radius: 8px; padding: 8px 12px;
+}
+.day-row input[type=text], .day-row input[type=time] {
+  border: none; background: transparent; outline: none;
+  font-family: inherit; font-size: 13px; color: var(--ink); width: 100%;
+}
+.day-row input[type=text] { font-weight: 500; }
+.day-row-label { font-size: 11px; color: var(--ink3); margin-bottom: 2px; }
+.btn-remove { background: none; border: none; cursor: pointer; color: var(--ink3); font-size: 14px; padding: 2px 4px; }
+.btn-remove:hover { color: #c0392b; }
+
+/* ── Ambientes editáveis ── */
+.ambientes-section { margin-bottom: 1.25rem; }
+.amb-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.amb-table th { font-size: 11px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink3); text-align: left; padding: 0 8px 8px 0; border-bottom: 0.5px solid var(--border); }
+.amb-table th:last-child { width: 32px; }
+.amb-table td { padding: 8px 8px 8px 0; border-bottom: 0.5px solid var(--border-light); vertical-align: middle; }
+.amb-table tr:last-child td { border-bottom: none; }
+.amb-table input[type=text] { border: none; background: transparent; outline: none; font-family: inherit; font-size: 13px; color: var(--ink); width: 100%; }
+.amb-table input[type=number] { border: none; background: transparent; outline: none; font-family: inherit; font-size: 13px; color: var(--ink); width: 50px; text-align: right; }
+.amb-pct { font-size: 11px; color: var(--ink3); }
+.amb-total-row { font-size: 12px; color: var(--ink3); text-align: right; padding-top: 6px; }
+.amb-total-row.error { color: #c0392b; }
+
+/* ── Results ── */
+.results-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.res-card { background: var(--bg); border-radius: var(--radius-sm); padding: 12px; }
+.res-label { font-size: 11px; color: var(--ink3); margin-bottom: 3px; line-height: 1.3; }
+.res-num { font-size: 22px; font-weight: 500; color: var(--ink); line-height: 1; }
+.res-unit { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+
+.days-results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; margin-bottom: 1.25rem; }
+.day-res-card { background: var(--bg); border-radius: 8px; padding: 10px 8px; text-align: center; }
+.day-res-label { font-size: 10px; color: var(--ink3); margin-bottom: 3px; font-weight: 500; }
+.day-res-num { font-size: 16px; font-weight: 500; color: var(--ink); }
+.day-res-sub { font-size: 10px; color: var(--ink3); margin-top: 2px; }
+
+/* ── Benchmark note ── */
+.benchmark-row { display: flex; align-items: flex-start; gap: 8px; margin-top: 1rem; padding-top: 1rem; border-top: 0.5px solid var(--border-light); }
+.benchmark-toggle { flex-shrink: 0; margin-top: 2px; cursor: pointer; }
+.benchmark-text { font-size: 11px; color: var(--ink3); line-height: 1.7; flex: 1; }
+.benchmark-text textarea {
+  width: 100%; border: none; background: transparent; outline: none;
+  font-family: inherit; font-size: 11px; color: var(--ink3); line-height: 1.7;
+  resize: none; min-height: 40px;
+}
+.benchmark-text.hidden-note { display: none; }
+
+/* ── Bloco brindes ── */
+.tiers-section { margin-bottom: 1.25rem; }
+.tiers-list { display: flex; flex-direction: column; gap: 6px; }
+.tier-row {
+  display: grid; grid-template-columns: 1fr 120px 80px auto;
+  gap: 8px; align-items: center;
+  background: var(--bg); border-radius: 8px; padding: 8px 12px;
+}
+.tier-row input[type=text] { border: none; background: transparent; outline: none; font-family: inherit; font-size: 13px; color: var(--ink); width: 100%; }
+.tier-row input[type=number] { border: none; background: transparent; outline: none; font-family: inherit; font-size: 13px; color: var(--ink); width: 100%; text-align: right; }
+.tier-row-sub { font-size: 11px; color: var(--ink3); }
+
+/* ── Total block ── */
+.total-block {
+  background: var(--ink);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+.total-block .block-header { border-bottom-color: rgba(255,255,255,0.1); }
+.total-block .block-title-input { color: #fff; }
+.total-block .sum-row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-bottom: 0.5px solid rgba(255,255,255,0.08); font-size: 13px; }
+.total-block .sum-row:last-child { border-bottom: none; }
+.total-block .sum-label { color: rgba(255,255,255,0.55); }
+.total-block .sum-val { font-weight: 500; color: #fff; }
+.total-block .results-row { margin-top: 1.25rem; }
+.total-block .res-card { background: rgba(255,255,255,0.07); }
+.total-block .res-label { color: rgba(255,255,255,0.45); }
+.total-block .res-num { color: #fff; font-size: 26px; }
+.total-block .res-unit { color: rgba(255,255,255,0.4); }
+.sum-lines { margin-bottom: 1rem; }
+
+/* ── Export card ── */
+.export-section { margin-bottom: 1.5rem; }
+.export-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--ink); color: #fff;
+  border: none; border-radius: 10px; padding: 10px 18px;
+  font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+}
+.export-btn:hover { opacity: 0.85; }
+.export-btn svg { width: 14px; height: 14px; }
+
+#export-card {
+  margin-top: 1rem;
+  background: var(--ink);
+  border-radius: var(--radius);
+  padding: 2rem;
+  display: none;
+}
+#export-card.visible { display: block; }
+.ec-eyebrow { font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 6px; }
+.ec-project { font-size: 18px; font-weight: 500; color: #fff; margin-bottom: 4px; }
+.ec-desc { font-size: 12px; color: rgba(255,255,255,0.45); margin-bottom: 1.5rem; }
+.ec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.ec-item {}
+.ec-num { font-size: 32px; font-weight: 500; color: #fff; line-height: 1; }
+.ec-label { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+.ec-divider { height: 0.5px; background: rgba(255,255,255,0.1); margin-bottom: 1rem; }
+.ec-footer { font-size: 10px; color: rgba(255,255,255,0.25); }
+
+/* ── Misc ── */
+.divider { height: 0.5px; background: var(--border-light); margin: 1rem 0; }
+.warn { font-size: 11px; color: #c0392b; }
+
+@media (max-width: 540px) {
+  .day-row { grid-template-columns: 70px 1fr 1fr auto; }
+  .tier-row { grid-template-columns: 1fr 90px auto; }
+  .tier-row .tier-row-sub { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── HEADER ── -->
+  <div class="page-header">
+    <div class="eyebrow">Sherpa42 · Calculadora de Operação</div>
+    <input class="project-name-input" id="proj-name" type="text" placeholder="Nome do projeto" value="">
+    <input class="project-desc-input" id="proj-desc" type="text" placeholder="Descrição breve da ativação">
+  </div>
+
+  <!-- ── TOGGLE BAR ── -->
+  <div class="toggle-bar">
+    <div class="toggle-bar-label">Blocos ativos</div>
+    <label class="toggle-pill active" id="pill-fluxo">
+      <input type="checkbox" checked onchange="toggleBlock('bloco-fluxo', this)">
+      <span class="pill-dot"></span> Fluxo de público
+    </label>
+    <label class="toggle-pill active" id="pill-circuito">
+      <input type="checkbox" checked onchange="toggleBlock('bloco-circuito', this)">
+      <span class="pill-dot"></span> Circuito imersivo
+    </label>
+    <label class="toggle-pill" id="pill-individual">
+      <input type="checkbox" onchange="toggleBlock('bloco-individual', this)">
+      <span class="pill-dot"></span> Interação individual
+    </label>
+    <label class="toggle-pill" id="pill-paralela">
+      <input type="checkbox" onchange="toggleBlock('bloco-paralela', this)">
+      <span class="pill-dot"></span> Estações paralelas
+    </label>
+    <label class="toggle-pill" id="pill-fachada">
+      <input type="checkbox" onchange="toggleBlock('bloco-fachada', this)">
+      <span class="pill-dot"></span> Alcance passivo
+    </label>
+    <label class="toggle-pill" id="pill-ugc">
+      <input type="checkbox" onchange="toggleBlock('bloco-ugc', this)">
+      <span class="pill-dot"></span> UGC / orgânico
+    </label>
+    <label class="toggle-pill" id="pill-brindes">
+      <input type="checkbox" onchange="toggleBlock('bloco-brindes', this)">
+      <span class="pill-dot"></span> Brindes / entregas
+    </label>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       BLOCO 1 — FLUXO DE PÚBLICO
+  ══════════════════════════════════════════ -->
+  <div class="block" id="bloco-fluxo">
+    <div class="block-header">
+      <div class="block-icon" style="background:#eef2ff; font-size:16px">📅</div>
+      <div style="flex:1">
+        <input class="block-title-input" type="text" value="Fluxo de público" onchange="calc()">
+        <br>
+        <input class="block-subtitle-input" type="text" value="Dias de operação e horários de funcionamento" onchange="calc()">
+      </div>
+    </div>
+
+    <div class="days-section">
+      <div class="days-section-header">
+        <span class="section-label">Dias de operação</span>
+        <button class="btn-add" onclick="addDay()">+ Adicionar dia</button>
+      </div>
+      <div class="days-list" id="days-list"></div>
+    </div>
+
+    <div class="num-input-row">
+      <div class="num-item">
+        <div class="sl-label">Público estimado por hora</div>
+        <div class="num-field-wrap">
+          <input class="num-field" id="f-pph" type="number" value="200" min="1" onchange="calc()">
+          <span class="num-unit">pax/h</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="days-results-grid" id="fluxo-days-res"></div>
+
+    <div class="results-row">
+      <div class="res-card">
+        <div class="res-label">Total de horas</div>
+        <div class="res-num" id="f-r-horas">—</div>
+        <div class="res-unit">horas de operação</div>
+      </div>
+      <div class="res-card">
+        <div class="res-label">Público total estimado</div>
+        <div class="res-num" id="f-r-total">—</div>
+        <div class="res-unit">visitantes</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       BLOCO 2 — CIRCUITO IMERSIVO
+  ══════════════════════════════════════════ -->
+  <div class="block" id="bloco-circuito">
+    <div class="block-header">
+      <div class="block-icon" style="background:#eeedfe; font-size:16px">✨</div>
+      <div style="flex:1">
+        <input class="block-title-input" type="text" value="Circuito imersivo" onchange="calc()">
+        <br>
+        <input class="block-subtitle-input" type="text" value="Grupos que percorrem ambientes em sequência" onchange="calc()">
+      </div>
+    </div>
+
+    <div class="sliders-grid">
+      <div class="slider-item">
+        <div class="sl-label">Pax por grupo</div>
+        <div class="sl-val" id="c-pax-val">20</div>
+        <div class="sl-unit">pessoas</div>
+        <input type="range" min="1" max="60" step="1" value="20" id="c-pax-s" oninput="calc()">
+      </div>
+      <div class="slider-item">
+        <div class="sl-label">Intervalo entre grupos</div>
+        <div class="sl-val" id="c-int-val">8</div>
+        <div class="sl-unit">minutos</div>
+        <input type="range" min="2" max="30" step="1" value="8" id="c-int-s" oninput="calc()">
+      </div>
+      <div class="slider-item">
+        <div class="sl-label">Duração total</div>
+        <div class="sl-val" id="c-dur-val">20</div>
+        <div class="sl-unit">minutos</div>
+        <input type="range" min="5" max="120" step="1" value="20" id="c-dur-s" oninput="calc()">
+      </div>
+    </div>
+
+    <div class="ambientes-section">
+      <div class="days-section-header">
+        <span class="section-label">Ambientes</span>
+        <button class="btn-add" onclick="addAmbiente()">+ Adicionar ambiente</button>
+      </div>
+      <table class="amb-table">
+        <thead>
+          <tr>
+            <th>Ambiente</th>
+            <th>Descrição</th>
+            <th style="text-align:right; width:60px">% tempo</th>
+            <th style="text-align:right; width:70px">Duração</th>
+            <th style="width:32px"></th>
+          </tr>
+        </thead>
+        <tbody id="amb-tbody"></tbody>
+      </table>
+      <div class="amb-total-row" id="amb-total-row"></div>
+    </div>
+
+    <div class="days-results-grid" id="circuito-days-res"></div>
+
+    <div class="results-row">
+      <div class="res-card">
+        <div class="res-label">Grupos totais</div>
+        <div class="res-num" id="c-r-grupos">—</div>
+        <div class="res-unit">grupos</div>
+      </div>
+      <div class="res-card">
+        <div class="res-label">Pax imersiva</div>
+        <div class="res-num" id="c-r-pax">—</div>
+        <div class="res-unit">visitantes</div>
+      </div>
+      <div class="res-card">
+        <div class="res-label">Grupos/hora</div>
+        <div class="res-num" id="c-r-gph">—</div>
+        <div class="res-unit">grupos/h</div>
+      </div>
+      <div class="res-card">
+        <div class="res-label">Pax/hora</div>
+        <div class="res-num" id="c-r-pph">—</div>
+        <div class="res-unit">pax/h</div>
+      </div>
+    </div>
+
+    <div class="benchmark-row">
+      <input type="checkbox" class="benchmark-toggle" id="bench-circuito" checked onchange="toggleBench('bench-circuito','bench-circuito-text')">
+      <div class="benchmark-text" id="bench-circuito-text">
+        <textarea id="bench-circuito-ta" rows="2" onchange="calc()" placeholder="Benchmark ou nota metodológica (opcional)">Benchmark: grupos de 15–25 pax com intervalos de 5–10 min são padrão em ativações imersivas de alta fidelidade.</textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       BLOCO 3 — INTERAÇÃO INDIVIDUAL
+  ══════════════════════════════════════════ -->
+  <div class="block hidden" id="bloco-individual">
+    <div class="block-header">
+      <div class="block-icon" style="background:#e1f5ee; font-size:16px">🙋</div>
+      <div style="flex:1">
+        <input class="block-title-input" type="text" value="Interação individual" onchange="calc()">
+        <br>
+        <input class="block-subtitle-input" type="text" value="Atendimentos 1:1 ou em pequenos grupos simultâneos" onchange="calc()">
+      </div>
+    </div>
+
+    <div class="sliders-grid">
+      <div class="slider-item">
+        <div class="sl-label">Duração por interação</div>
+        <div class="sl-val" id="i-dur-val">10</div>
+        <div class="sl-unit">minutos</div>
+        <input type="range" min="1" max="60" step="1" value="10" id="i-dur-s" oninput="calc()">
+      </div>
+      <div class="slider-item">
+        <div class="sl-label">Pontos simultâneos</div>
+        <div class="sl-val" id="i-pts-val">3</div>
+        <div class="sl-unit">estações ativas</div>
+        <input type="range" min="1" max="20" step="1" value="3" id="i-pts-s" oninput="calc()">
+      </div>
+      <div class="slider-item">
+        <div class="sl-label">Aproveitamento</div>
+        <div class="sl-val" id="i-apr-val">80%</div>
+        <div class="sl-unit">do tempo operacional</div>
+        <input type="range" min="50" max="100" step="5" value="80" id="i-apr-s" oninput="calc()">
+      </div>
+    </div>
+
+    <div class="results-row">
+      <div class="res-card">
+        <div class="res-label">Interações/hora por ponto</div>
+        <div class="res-num" id="i-r-iph">—</div>
+        <div class="res-unit">atend./h</div>
+      </div>
+      <div class="res-card">
+        <div class="res-label">Capacidade total/hora</div>
+        <div class="res-num" id="i-r-total-h">—</div>
+        <div class="res-unit">pax/h</div>
+      </div>
+      <div class="res-card">
+        <div class="res-label">Total de interações</div>
+        <div class="res-num" id="i-r-total">—</div>
+        <div class="res-unit">atendimentos</div>
+      </div>
+    </div>
+
+    <div class="benchmark-row">
+      <input type="checkbox" class="benchmark-toggle" id="bench-individual" checked onchange="toggleBench('bench-individual','bench-individual-text')">
+      <div class="benchmark-text" id="bench-individual-text">
+        <textarea id="bench-individual-ta" rows="2" placeholder="Benchmark ou nota metodológica (opcional)">Aproveitamento de 80% considera pausas operacionais, transições e variações de fluxo.</textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       BLOCO 4 — ESTAÇÕES PARALELAS
+  ══════════════════════════════════════════ -->
+  <div class="block hidden" id="bloco-paralela">
+    <div class="block-header">
+      <div class="block-icon" style="background:#fff3e0; font-size:16px">⚡</div>
+      <div style="flex:1">
+        <input class="block-title-input" type="text" value="Estações paralelas" onchange="calc()">
+        <br>
+        <input class="block-subtitle-input" type="text" value="Interações independentes entre si, sem circuito sequencial" onchange="calc()">
+      </div>
+    </div>
+
+    <div class="sliders-grid">
+      <div class="slider-item">
+        <div class="sl-label">Nº de estações</div>
+        <div class="sl-val" id="p-est-val">4</div>
+        <div class="sl-unit">estações</div>
+        <input type="range" min="1" max="20" step="1" value="4" id="p-est-s" oninput="calc()">
+      </div>
+      <div class="slider-item">
+        <div class="sl-label">Pax simultâneos por estação</div>
+        <div class="sl-val" id="p-pax-val">5</div>
+        <div class="sl-unit">pessoas</div>
+        <input type="range" min="1" max="30" step="1" value="5" id="p-pax-s" oninput="calc()">
+      </div>
+      <div class="slider-item">
+        <div class="sl-label">Tempo médio na estação</div>
+        <div class="sl-val" id="p-dur-val">5</div>
+        <div class="sl-unit">minutos</div>
+        <input type="range" min="1" max="30" step="1" value="5" id="p-dur-s" oninput="calc()">
+      </div>
+    </div>
+
+    <div class="results-row">
+      <div class="res-card">
+        <div class="res-label">Capacidade simultânea</div>
+        <div class="res-num" id="p-r-simult">—</div>
+        <div class="res-unit">pax ao mesmo tempo</div>
+      </div>
+      <div class="res-card">
+        <div class="res-label">Throughput/hora</div>
+        <div class="res-num" id="p-r-tph">—</div>
+        <div class="res-unit">pax/h total</div>
+      </div>
+      <div class="res-card">
+        <div class="res-label">Total estimado</div>
+        <div class="res-num" id="p-r-total">—</div>
+        <div class="res-unit">interações</div>
+      </div>
+    </div>
+
+    <div class="benchmark-row">
+      <input type="checkbox" class="benchmark-toggle" id="bench-paralela" checked onchange="toggleBench('bench-paralela','bench-paralela-text')">
+      <div class="benchmark-text" id="bench-paralela-text">
+        <textarea id="bench-paralela-ta" rows="2" placeholder="Benchmark ou nota metodológica (opcional)">Estações paralelas aumentam throughput sem depender de sincronização entre participantes.</textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       BLOCO 5 — ALCANCE PASSIVO
+  ══════════════════════════════════════════ -->
+  <div class="block hidden" id="bloco-fachada">
+    <div class="block-header">
+      <div class="block-icon" style="background:#fce4ec; font-size:16px">👁️</div>
+      <div style="flex:1">
+        <input class="block-title-input" type="text" value="Alcance passivo" onchange="calc()">
+        <br>
+        <input class="block-subtitle-input" type="text" value="Público impactado por fachada, sinalização ou presença no espaço" onchange="calc()">
+      </div>
+    </div>
+
+    <div class="sliders-grid">
+      <div class="slider-item">
+        <div class="sl-label">Público total do evento</div>
+        <div class="sl-val" id="fa-pub-val">—</div>
+        <div class="sl-unit">visitantes</div>
+        <input type="range" min="100" max="500000" step="100" value="10000" id="fa-pub-s" oninput="calc()">
+      </div>
+      <div class="slider-item">
+        <div class="sl-label">% impactado passivamente</div>
+        <div class="sl-val" id="fa-pct-val">40%</div>
+        <div class="sl-unit">do público total</div>
+        <input type="range" min="5" max="100" step="5" value="40" id="fa-pct-s" oninput="calc()">
+      </div>
+    </div>
+
+    <div class="results-row">
+      <div class="res-card">
+        <div class="res-label">Público do evento</div>
+        <div class="res-num" id="fa-r-pub">—</div>
+        <div class="res-unit">total</div>
+      </div>
+      <div class="res-card">
+        <div class="res-label">Impactados passivamente</div>
+        <div class="res-num" id="fa-r-imp">—</div>
+        <div class="res-unit">visitantes</div>
+      </div>
+    </div>
+
+    <div class="benchmark-row">
+      <input type="checkbox" class="benchmark-toggle" id="bench-fachada" checked onchange="toggleBench('bench-fachada','bench-fachada-text')">
+      <div class="benchmark-text" id="bench-fachada-text">
+        <textarea id="bench-fachada-ta" rows="2" placeholder="Benchmark ou nota metodológica (opcional)">Benchmark: ativações âncora em festivais convertem 40–60% dos passantes em contato visual com a marca.</textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       BLOCO 6 — UGC / ORGÂNICO
+  ══════════════════════════════════════════ -->
+  <div class="block hidden" id="bloco-ugc">
+    <div class="block-header">
+      <div class="block-icon" style="background:#faeeda; font-size:16px">📱</div>
+      <div style="flex:1">
+        <input class="block-title-input" type="text" value="UGC e alcance orgânico" onchange="calc()">
+        <br>
+        <input class="block-subtitle-input" type="text" value="Conteúdo gerado por participantes e seu alcance fora do evento" onchange="calc()">
+      </div>
+    </div>
+
+    <div class="sliders-grid">
+      <div class="slider-item">
+        <div class="sl-label">Base de participantes (referência)</div>
+        <div class="sl-val" id="u-base-val">—</div>
+        <div class="sl-unit">pax</div>
+        <input type="range" min="0" max="50000" step="50" value="0" id="u-base-s" oninput="calc()">
+      </div>
+      <div class="slider-item">
+        <div class="sl-label">% que gera UGC</div>
+        <div class="sl-val" id="u-pct-val">30%</div>
+        <div class="sl-unit">dos participantes</div>
+        <input type="range" min="5" max="80" step="5" value="30" id="u-pct-s" oninput="calc()">
+      </div>
+      <div class="slider-item">
+        <div class="sl-label">Alcance médio por post</div>
+        <div class="sl-val" id="u-alc-val">1.5k</div>
+        <div class="sl-unit">impressões</div>
+        <input type="range" min="100" max="20000" step="100" value="1500" id="u-alc-s" oninput="calc()">
+      </div>
+    </div>
+
+    <div class="results-row">
+      <div class="res-card">
+        <div class="res-label">Posts gerados</div>
+        <div class="res-num" id="u-r-posts">—</div>
+        <div class="res-unit">UGC estimado</div>
+      </div>
+      <div class="res-card">
+        <div class="res-label">Alcance orgânico</div>
+        <div class="res-num" id="u-r-reach">—</div>
+        <div class="res-unit">impressões</div>
+      </div>
+      <div class="res-card">
+        <div class="res-label">Multiplicador</div>
+        <div class="res-num" id="u-r-mult">—</div>
+        <div class="res-unit">× base</div>
+      </div>
+    </div>
+
+    <div class="benchmark-row">
+      <input type="checkbox" class="benchmark-toggle" id="bench-ugc" checked onchange="toggleBench('bench-ugc','bench-ugc-text')">
+      <div class="benchmark-text" id="bench-ugc-text">
+        <textarea id="bench-ugc-ta" rows="2" placeholder="Benchmark ou nota metodológica (opcional)">Benchmark: taxa de UGC em ativações imersivas de alta qualidade: 18–50%. Alcance médio de fã: 1.000–2.000 seguidores.</textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       BLOCO 7 — BRINDES / ENTREGAS
+  ══════════════════════════════════════════ -->
+  <div class="block hidden" id="bloco-brindes">
+    <div class="block-header">
+      <div class="block-icon" style="background:#e8f5e9; font-size:16px">🎁</div>
+      <div style="flex:1">
+        <input class="block-title-input" type="text" value="Brindes e entregas" onchange="calc()">
+        <br>
+        <input class="block-subtitle-input" type="text" value="Planejamento de volume por tipo de brinde e critério de distribuição" onchange="calc()">
+      </div>
+    </div>
+
+    <div class="tiers-section">
+      <div class="days-section-header">
+        <span class="section-label">Tipos de brinde</span>
+        <button class="btn-add" onclick="addTier()">+ Adicionar</button>
+      </div>
+      <div class="tiers-list" id="tiers-list"></div>
+    </div>
+
+    <div class="results-row" id="brindes-results"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       BLOCO TOTAL
+  ══════════════════════════════════════════ -->
+  <div class="total-block" id="bloco-total">
+    <div class="block-header" style="margin-bottom:1.25rem; padding-bottom:1rem;">
+      <div class="block-icon" style="background:rgba(255,255,255,0.1); font-size:16px">🌟</div>
+      <div>
+        <div class="block-title" style="color:#fff">Impacto total estimado</div>
+      </div>
+    </div>
+    <div class="sum-lines" id="sum-lines"></div>
+    <div class="results-row">
+      <div class="res-card">
+        <div class="res-label">Interações diretas</div>
+        <div class="res-num" id="t-diretas">—</div>
+        <div class="res-unit">pax</div>
+      </div>
+      <div class="res-card">
+        <div class="res-label">Alcance total</div>
+        <div class="res-num" id="t-total">—</div>
+        <div class="res-unit">presencial + orgânico</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       EXPORTAR
+  ══════════════════════════════════════════ -->
+  <div class="export-section">
+    <button class="export-btn" onclick="generateExport()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Exportar big numbers
+    </button>
+    <div id="export-card">
+      <div class="ec-eyebrow">Sherpa42 · Operação</div>
+      <div class="ec-project" id="ec-proj">—</div>
+      <div class="ec-desc" id="ec-desc">—</div>
+      <div class="ec-grid" id="ec-grid"></div>
+      <div class="ec-divider"></div>
+      <div class="ec-footer" id="ec-footer">Estimativas de planejamento com base nas premissas definidas.</div>
+    </div>
+    <div style="margin-top:8px; display:none" id="export-actions">
+      <button class="export-btn" onclick="downloadExportCard()" style="background:#333; margin-right:8px">
+        ↓ Baixar imagem PNG
+      </button>
+      <button class="export-btn" onclick="closeExport()" style="background:transparent; border:1px solid #ccc; color:#333">
+        Fechar
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Estado global ───────────────────────────────────────────────
+let days = [
+  { label: "Dia 1", start: "16:30", end: "21:00" },
+  { label: "Dia 2", start: "10:30", end: "21:00" },
+  { label: "Dia 3", start: "10:30", end: "21:00" },
+];
+
+let ambientes = [
+  { name: "Ambiente A", detail: "Descrição", pct: 30 },
+  { name: "Ambiente B", detail: "Descrição", pct: 40 },
+  { name: "Ambiente C", detail: "Descrição", pct: 30 },
+];
+
+let tiers = [
+  { name: "Brinde padrão", base: "todos", pct: 100 },
+];
+
+// resultados globais para export
+let results = {};
+
+// ── Helpers ─────────────────────────────────────────────────────
+function fmt(n) {
+  if (n === null || n === undefined || isNaN(n)) return "—";
+  n = Math.round(n);
+  if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1000)    return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  return n.toLocaleString('pt-BR');
+}
+
+function fmtTime(mins) {
+  const m = Math.floor(mins);
+  const s = Math.round((mins - m) * 60);
+  return s ? `${m} min ${s} s` : `${m} min`;
+}
+
+function timeToMins(t) {
+  if (!t) return 0;
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+function totalMinutesForDays() {
+  return days.map(d => Math.max(0, timeToMins(d.end) - timeToMins(d.start)));
+}
+
+function isActive(id) {
+  const el = document.getElementById(id);
+  return el && !el.classList.contains('hidden');
+}
+
+// ── Toggle bloco ─────────────────────────────────────────────────
+function toggleBlock(blockId, cb) {
+  const block = document.getElementById(blockId);
+  const pill = cb.closest('.toggle-pill');
+  if (cb.checked) {
+    block.classList.remove('hidden');
+    pill.classList.add('active');
+  } else {
+    block.classList.add('hidden');
+    pill.classList.remove('active');
+  }
+  calc();
+}
+
+function toggleBench(cbId, textId) {
+  const cb = document.getElementById(cbId);
+  const txt = document.getElementById(textId);
+  txt.classList.toggle('hidden-note', !cb.checked);
+}
+
+// ── Dias ─────────────────────────────────────────────────────────
+function renderDays() {
+  const list = document.getElementById('days-list');
+  list.innerHTML = '';
+  days.forEach((d, i) => {
+    const row = document.createElement('div');
+    row.className = 'day-row';
+    row.innerHTML = `
+      <div>
+        <div class="day-row-label">Nome</div>
+        <input type="text" value="${d.label}" onchange="days[${i}].label=this.value; calc()">
+      </div>
+      <div>
+        <div class="day-row-label">Início</div>
+        <input type="time" value="${d.start}" onchange="days[${i}].start=this.value; calc()">
+      </div>
+      <div>
+        <div class="day-row-label">Fim</div>
+        <input type="time" value="${d.end}" onchange="days[${i}].end=this.value; calc()">
+      </div>
+      <button class="btn-remove" onclick="removeDay(${i})" title="Remover">×</button>`;
+    list.appendChild(row);
+  });
+}
+
+function addDay() {
+  days.push({ label: `Dia ${days.length + 1}`, start: "09:00", end: "18:00" });
+  renderDays(); calc();
+}
+
+function removeDay(i) {
+  days.splice(i, 1);
+  renderDays(); calc();
+}
+
+// ── Ambientes ────────────────────────────────────────────────────
+function renderAmbientes() {
+  const tbody = document.getElementById('amb-tbody');
+  tbody.innerHTML = '';
+  ambientes.forEach((a, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" value="${a.name}" onchange="ambientes[${i}].name=this.value; calc()"></td>
+      <td><input type="text" value="${a.detail}" onchange="ambientes[${i}].detail=this.value; calc()" style="color:var(--ink3)"></td>
+      <td style="text-align:right"><input type="number" value="${a.pct}" min="1" max="100" onchange="ambientes[${i}].pct=+this.value; calc()"></td>
+      <td style="text-align:right; color:var(--ink3); font-size:12px" id="amb-dur-${i}">—</td>
+      <td><button class="btn-remove" onclick="removeAmbiente(${i})">×</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function addAmbiente() {
+  ambientes.push({ name: "Novo ambiente", detail: "", pct: 10 });
+  renderAmbientes(); calc();
+}
+
+function removeAmbiente(i) {
+  ambientes.splice(i, 1);
+  renderAmbientes(); calc();
+}
+
+// ── Tiers de brindes ─────────────────────────────────────────────
+function renderTiers() {
+  const list = document.getElementById('tiers-list');
+  list.innerHTML = '';
+  tiers.forEach((t, i) => {
+    const row = document.createElement('div');
+    row.className = 'tier-row';
+    row.innerHTML = `
+      <div>
+        <div class="day-row-label">Nome do brinde</div>
+        <input type="text" value="${t.name}" onchange="tiers[${i}].name=this.value; calc()">
+      </div>
+      <div>
+        <div class="day-row-label">Base de distribuição</div>
+        <input type="text" value="${t.base}" placeholder="ex: todos, circuito" onchange="tiers[${i}].base=this.value; calc()">
+      </div>
+      <div>
+        <div class="day-row-label">% do público</div>
+        <input type="number" value="${t.pct}" min="1" max="100" style="width:60px;text-align:right" onchange="tiers[${i}].pct=+this.value; calc()">
+      </div>
+      <button class="btn-remove" onclick="removeTier(${i})">×</button>`;
+    list.appendChild(row);
+  });
+}
+
+function addTier() {
+  tiers.push({ name: "Novo brinde", base: "todos", pct: 100 });
+  renderTiers(); calc();
+}
+
+function removeTier(i) {
+  tiers.splice(i, 1);
+  renderTiers(); calc();
+}
+
+// ── CÁLCULO PRINCIPAL ────────────────────────────────────────────
+function calc() {
+  const dayMins = totalMinutesForDays();
+  const totalHours = dayMins.reduce((a, b) => a + b, 0) / 60;
+
+  results = { items: [], diretas: 0, alcanceOrganico: 0 };
+
+  // ── Bloco Fluxo ──
+  let fluxoTotal = 0;
+  if (isActive('bloco-fluxo')) {
+    const pph = +document.getElementById('f-pph').value || 0;
+    const grid = document.getElementById('fluxo-days-res');
+    grid.innerHTML = '';
+    dayMins.forEach((m, i) => {
+      const h = m / 60;
+      const pub = Math.round(h * pph);
+      fluxoTotal += pub;
+      const d = days[i] || {};
+      const card = document.createElement('div');
+      card.className = 'day-res-card';
+      card.innerHTML = `<div class="day-res-label">${d.label || 'Dia ' + (i+1)}</div><div class="day-res-num">${fmt(pub)}</div><div class="day-res-sub">${(h).toFixed(1)}h</div>`;
+      grid.appendChild(card);
+    });
+    document.getElementById('f-r-horas').textContent = totalHours.toFixed(1);
+    document.getElementById('f-r-total').textContent = fmt(fluxoTotal);
+  }
+
+  // ── Bloco Circuito ──
+  let circuitoPax = 0;
+  if (isActive('bloco-circuito')) {
+    const pax  = +document.getElementById('c-pax-s').value;
+    const intv = +document.getElementById('c-int-s').value;
+    const dur  = +document.getElementById('c-dur-s').value;
+    document.getElementById('c-pax-val').textContent = pax;
+    document.getElementById('c-int-val').textContent = intv;
+    document.getElementById('c-dur-val').textContent = dur;
+
+    // ambientes
+    const totalPct = ambientes.reduce((s, a) => s + a.pct, 0);
+    const pctOk = totalPct === 100;
+    document.getElementById('amb-total-row').className = 'amb-total-row' + (pctOk ? '' : ' error');
+    document.getElementById('amb-total-row').textContent = pctOk ? '' : `⚠ Total = ${totalPct}% (deve ser 100%)`;
+    ambientes.forEach((a, i) => {
+      const el = document.getElementById(`amb-dur-${i}`);
+      if (el) el.textContent = fmtTime(dur * a.pct / 100);
+    });
+
+    // grupos por dia
+    let totalGrupos = 0;
+    const grid = document.getElementById('circuito-days-res');
+    grid.innerHTML = '';
+    dayMins.forEach((m, i) => {
+      const usable = Math.max(0, m - dur);
+      const g = Math.floor(usable / intv) + 1;
+      totalGrupos += g;
+      const d = days[i] || {};
+      const card = document.createElement('div');
+      card.className = 'day-res-card';
+      card.innerHTML = `<div class="day-res-label">${d.label || 'Dia ' + (i+1)}</div><div class="day-res-num">${fmt(g * pax)}</div><div class="day-res-sub">${g} grupos</div>`;
+      grid.appendChild(card);
+    });
+
+    circuitoPax = totalGrupos * pax;
+    const gph = +(60 / intv).toFixed(1);
+    document.getElementById('c-r-grupos').textContent = fmt(totalGrupos);
+    document.getElementById('c-r-pax').textContent    = fmt(circuitoPax);
+    document.getElementById('c-r-gph').textContent    = gph;
+    document.getElementById('c-r-pph').textContent    = fmt(gph * pax);
+
+    results.items.push({ label: "Pax — circuito imersivo", val: fmt(circuitoPax) });
+    results.diretas += circuitoPax;
+  }
+
+  // ── Bloco Individual ──
+  let individualTotal = 0;
+  if (isActive('bloco-individual')) {
+    const durI = +document.getElementById('i-dur-s').value;
+    const pts  = +document.getElementById('i-pts-s').value;
+    const apr  = +document.getElementById('i-apr-s').value;
+    document.getElementById('i-dur-val').textContent = durI;
+    document.getElementById('i-pts-val').textContent = pts;
+    document.getElementById('i-apr-val').textContent = apr + '%';
+
+    const iph = Math.floor((60 / durI) * (apr / 100));
+    const totalH = iph * pts;
+    individualTotal = Math.round(totalH * totalHours);
+
+    document.getElementById('i-r-iph').textContent     = iph;
+    document.getElementById('i-r-total-h').textContent = fmt(totalH);
+    document.getElementById('i-r-total').textContent   = fmt(individualTotal);
+
+    results.items.push({ label: "Pax — interação individual", val: fmt(individualTotal) });
+    results.diretas += individualTotal;
+  }
+
+  // ── Bloco Paralela ──
+  let parelaTotal = 0;
+  if (isActive('bloco-paralela')) {
+    const estacoes = +document.getElementById('p-est-s').value;
+    const paxEst   = +document.getElementById('p-pax-s').value;
+    const durP     = +document.getElementById('p-dur-s').value;
+    document.getElementById('p-est-val').textContent = estacoes;
+    document.getElementById('p-pax-val').textContent = paxEst;
+    document.getElementById('p-dur-val').textContent = durP;
+
+    const simult = estacoes * paxEst;
+    const tph    = Math.round((60 / durP) * paxEst * estacoes);
+    parelaTotal  = Math.round(tph * totalHours);
+
+    document.getElementById('p-r-simult').textContent = fmt(simult);
+    document.getElementById('p-r-tph').textContent    = fmt(tph);
+    document.getElementById('p-r-total').textContent  = fmt(parelaTotal);
+
+    results.items.push({ label: "Pax — estações paralelas", val: fmt(parelaTotal) });
+    results.diretas += parelaTotal;
+  }
+
+  // ── Bloco Fachada ──
+  let fachadaImp = 0;
+  if (isActive('bloco-fachada')) {
+    const pubS = document.getElementById('fa-pub-s');
+    const pub  = +pubS.value;
+    const pct  = +document.getElementById('fa-pct-s').value;
+    document.getElementById('fa-pub-val').textContent = fmt(pub);
+    document.getElementById('fa-pct-val').textContent = pct + '%';
+    fachadaImp = Math.round(pub * pct / 100);
+
+    document.getElementById('fa-r-pub').textContent = fmt(pub);
+    document.getElementById('fa-r-imp').textContent = fmt(fachadaImp);
+
+    results.items.push({ label: "Pax — alcance passivo", val: fmt(fachadaImp) });
+    results.diretas += fachadaImp;
+  }
+
+  // ── Bloco UGC ──
+  let ugcReach = 0;
+  if (isActive('bloco-ugc')) {
+    const baseS = document.getElementById('u-base-s');
+    const base  = +baseS.value || results.diretas;
+    const pct   = +document.getElementById('u-pct-s').value;
+    const alc   = +document.getElementById('u-alc-s').value;
+    document.getElementById('u-base-val').textContent = fmt(base);
+    document.getElementById('u-pct-val').textContent  = pct + '%';
+    document.getElementById('u-alc-val').textContent  = fmt(alc);
+
+    const posts = Math.round(base * pct / 100);
+    ugcReach = posts * alc;
+    const mult = base > 0 ? (ugcReach / base).toFixed(1) : '—';
+
+    document.getElementById('u-r-posts').textContent = fmt(posts);
+    document.getElementById('u-r-reach').textContent = fmt(ugcReach);
+    document.getElementById('u-r-mult').textContent  = mult + '×';
+
+    results.items.push({ label: "Posts UGC gerados", val: fmt(posts) });
+    results.items.push({ label: "Alcance orgânico estimado", val: fmt(ugcReach) });
+    results.alcanceOrganico = ugcReach;
+  }
+
+  // ── Bloco Brindes ──
+  if (isActive('bloco-brindes')) {
+    const resContainer = document.getElementById('brindes-results');
+    resContainer.innerHTML = '';
+    // base de referência: total de interações diretas ou fluxo
+    const baseRef = results.diretas || fluxoTotal;
+    tiers.forEach(t => {
+      const qty = Math.round(baseRef * t.pct / 100);
+      const card = document.createElement('div');
+      card.className = 'res-card';
+      card.innerHTML = `<div class="res-label">${t.name}</div><div class="res-num">${fmt(qty)}</div><div class="res-unit">unidades (${t.pct}% · base: ${t.base})</div>`;
+      resContainer.appendChild(card);
+      results.items.push({ label: t.name, val: fmt(qty) + ' un.' });
+    });
+  }
+
+  // ── Total ──
+  const sumLines = document.getElementById('sum-lines');
+  sumLines.innerHTML = '';
+  results.items.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'sum-row';
+    row.innerHTML = `<span class="sum-label">${r.label}</span><span class="sum-val">${r.val}</span>`;
+    sumLines.appendChild(row);
+  });
+
+  const alcanceTotal = results.diretas + results.alcanceOrganico;
+  document.getElementById('t-diretas').textContent = fmt(results.diretas);
+  document.getElementById('t-total').textContent   = fmt(alcanceTotal);
+}
+
+// ── Export ───────────────────────────────────────────────────────
+function generateExport() {
+  const projName = document.getElementById('proj-name').value || 'Projeto';
+  const projDesc = document.getElementById('proj-desc').value || '';
+
+  document.getElementById('ec-proj').textContent = projName;
+  document.getElementById('ec-desc').textContent = projDesc;
+
+  // big numbers: diretas + total + cada item relevante (máx 6)
+  const bigNumbers = [];
+  bigNumbers.push({ num: fmt(results.diretas), label: "Interações diretas" });
+  if (results.alcanceOrganico > 0)
+    bigNumbers.push({ num: fmt(results.diretas + results.alcanceOrganico), label: "Alcance total estimado" });
+  results.items.slice(0, 4).forEach(r => {
+    bigNumbers.push({ num: r.val, label: r.label });
+  });
+
+  const grid = document.getElementById('ec-grid');
+  grid.innerHTML = '';
+  bigNumbers.slice(0, 6).forEach(bn => {
+    const item = document.createElement('div');
+    item.className = 'ec-item';
+    item.innerHTML = `<div class="ec-num">${bn.num}</div><div class="ec-label">${bn.label}</div>`;
+    grid.appendChild(item);
+  });
+
+  const card = document.getElementById('export-card');
+  card.classList.add('visible');
+  document.getElementById('export-actions').style.display = 'block';
+}
+
+function downloadExportCard() {
+  const card = document.getElementById('export-card');
+  html2canvas(card, { backgroundColor: '#1a1a18', scale: 2 }).then(canvas => {
+    const a = document.createElement('a');
+    const projName = (document.getElementById('proj-name').value || 'operacao').replace(/\s+/g, '-').toLowerCase();
+    a.download = `${projName}-big-numbers.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  });
+}
+
+function closeExport() {
+  document.getElementById('export-card').classList.remove('visible');
+  document.getElementById('export-actions').style.display = 'none';
+}
+
+// ── Init ─────────────────────────────────────────────────────────
+renderDays();
+renderAmbientes();
+renderTiers();
+calc();
+</script>
+</body>
+</html>
