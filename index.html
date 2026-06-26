@@ -437,7 +437,7 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; background: var
     <div class="toggle-pills">
       <label class="toggle-pill active" id="pill-fluxo">
         <input type="checkbox" checked onchange="toggleBlock('bloco-fluxo', this)">
-        <span class="pill-dot"></span> Fluxo de público
+        <span class="pill-dot"></span> Calendário de operação
       </label>
       <label class="toggle-pill active" id="pill-circuito">
         <input type="checkbox" checked onchange="toggleBlock('bloco-circuito', this)">
@@ -466,13 +466,13 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; background: var
     </div>
   </div>
 
-  <!-- ══ BLOCO 1 — FLUXO ══ -->
+  <!-- ══ BLOCO 1 — CALENDÁRIO ══ -->
   <div class="block" id="bloco-fluxo">
     <div class="block-header">
       <div class="block-num">01</div>
       <div class="block-meta">
-        <input class="block-title-input" type="text" value="Fluxo de público" onchange="calc()">
-        <input class="block-subtitle-input" type="text" value="Dias de operação e horários de funcionamento" onchange="calc()">
+        <input class="block-title-input" type="text" value="Calendário de operação" onchange="calc()">
+        <input class="block-subtitle-input" type="text" value="Dias e horários que alimentam o cálculo de todos os blocos" onchange="calc()">
       </div>
       <div class="block-icon">📅</div>
     </div>
@@ -483,16 +483,6 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; background: var
       </div>
       <div class="days-list" id="days-list"></div>
 
-      <div class="num-input-row">
-        <div class="num-item">
-          <div class="sl-label">Público estimado por hora</div>
-          <div class="num-field-wrap">
-            <input class="num-field" id="f-pph" type="number" value="200" min="1" oninput="calc()">
-            <span class="num-unit">pax / hora</span>
-          </div>
-        </div>
-      </div>
-
       <div class="divider"></div>
       <div class="days-results-grid" id="fluxo-days-res"></div>
       <div class="results-row">
@@ -502,9 +492,9 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 14px; background: var
           <div class="res-unit">horas</div>
         </div>
         <div class="res-card">
-          <div class="res-label">Público total estimado</div>
-          <div class="res-num" id="f-r-total">—</div>
-          <div class="res-unit">visitantes</div>
+          <div class="res-label">Total de dias</div>
+          <div class="res-num" id="f-r-dias">—</div>
+          <div class="res-unit">dias</div>
         </div>
       </div>
     </div>
@@ -977,18 +967,16 @@ function calc() {
   const totalHours=dayMins.reduce((a,b)=>a+b,0)/60;
   results={items:[],diretas:0,alcanceOrganico:0};
 
-  let fluxoTotal=0;
   if (isActive('bloco-fluxo')) {
-    const pph=+document.getElementById('f-pph').value||0;
     const grid=document.getElementById('fluxo-days-res'); grid.innerHTML='';
     dayMins.forEach((m,i)=>{
-      const h=m/60,pub=Math.round(h*pph); fluxoTotal+=pub;
+      const h=m/60;
       const c=document.createElement('div'); c.className='day-res-card';
-      c.innerHTML=`<div class="day-res-label">${days[i]?.label||'Dia '+(i+1)}</div><div class="day-res-num">${fmt(pub)}</div><div class="day-res-sub">${h.toFixed(1)}h</div>`;
+      c.innerHTML=`<div class="day-res-label">${days[i]?.label||'Dia '+(i+1)}</div><div class="day-res-num">${h.toFixed(1)}h</div><div class="day-res-sub">${days[i]?.start||''} – ${days[i]?.end||''}</div>`;
       grid.appendChild(c);
     });
     document.getElementById('f-r-horas').textContent=totalHours.toFixed(1);
-    document.getElementById('f-r-total').textContent=fmt(fluxoTotal);
+    document.getElementById('f-r-dias').textContent=days.length;
   }
 
   let circuitoPax=0;
@@ -1088,7 +1076,7 @@ function calc() {
   }
 
   if (isActive('bloco-brindes')) {
-    const baseRef=results.diretas||fluxoTotal;
+    const baseRef=results.diretas;
     const container=document.getElementById('brindes-results'); container.innerHTML='';
     tiers.forEach(t=>{
       const qty=Math.round(baseRef*t.pct/100);
